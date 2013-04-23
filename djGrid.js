@@ -25,27 +25,45 @@
       };
       var settings = $.extend(defaults, options);
       
-      var djGrid = {
-        "theadFixer": null,
-        "tdWider": null
-      };
-      
-      if(settings.tdWider&&!settings.theadFixer) {
-        djGrid.tdWider = this.tdWider(settings);
-      } else if(settings.theadFixer&&!settings.tdWider) {
-        djGrid.theadFixer = this.theadFixer(settings);
-      } else if(settings.tdWider&&settings.theadFixer) {
-        djGrid.theadFixer = this.theadFixer({
-          "bindResize": settings.bindResize,
-          "overflow_x": settings.overflow_x,
-          "floatMode": true
-        });
-        djGrid.tdWider = this.tdWider({"applyToAnotherTable": true});
-      }      
-      return djGrid;      
+      var djGrid = new DjGrid();
+      djGrid.$this = this;
+      djGrid.initialize(settings);
+      return djGrid;
     }
 
   };
+  
+  function DjGrid() {
+    this.$this = null;
+    this.theadFixer = null;
+    this.tdWider = null;
+  }
+  
+  DjGrid.prototype = {
+
+    constructor: DjGrid,
+
+    initialize: function(st) {
+      if(st.tdWider&&!st.theadFixer) {
+        this.tdWider = this.$this.tdWider(st);
+      } else if(st.theadFixer&&!st.tdWider) {
+        this.theadFixer = this.$this.theadFixer(st);
+      } else if(st.tdWider&&st.theadFixer) {
+        this.theadFixer = this.$this.theadFixer({
+          "bindResize": st.bindResize,
+          "overflow_x": st.overflow_x,
+          "floatMode": true
+        });
+        this.tdWider = this.$this.tdWider({"applyToAnotherTable": true});
+      }
+    },
+    
+    revert: function() {
+      this.tdWider.revert();
+      this.theadFixer.revert();
+    }
+    
+  }
 
   $.fn.djGrid = function(method) {
     if (methods[method]) {
@@ -100,6 +118,7 @@
     this.t2 = null;
     this.t3 = null;
     this.t4 = null;
+    this.hasUsed = false;
   }
 
   TheadFixer.prototype = {
@@ -123,6 +142,7 @@
         this.appendTheadAndSetPosition();
       }
       this.syncScrollBar();
+      this.hasUsed = true;
     },
 
     setTdWidth: function() {
@@ -316,11 +336,16 @@
 
     revert: function() {
 
-      if(this.floatMode) {
-        this.removeTheadAndRevertPosition();
+      if(this.hasUsed) {
+      
+        if(this.floatMode) {
+          this.removeTheadAndRevertPosition();
+        }
+        this.revertHtml();
+        this.revertTdWidth();
+        this.hasUsed = false;
+
       }
-      this.revertHtml();
-      this.revertTdWidth();
 
     }
 
@@ -370,6 +395,7 @@
     this.$this = null;
     this.currentMoveLength = 0;
     this.applyToAnotherTable = null;
+    this.hasUsed = false;
   }
   
   TdWider.prototype = {
@@ -384,6 +410,7 @@
       if(this.applyToAnotherTable) {
         this.setElements("last");
       }
+      this.hasUsed = true;
     
     },
     
@@ -582,15 +609,21 @@
     
     revert: function() {
     
-      this.reverTdWidth();
+      if(this.hasUsed) {
     
-      if(this.applyToAnotherTable) {
-        this.revertElements("last");
-      }
-    
-      this.$this.find(".m_inner").draggable("destroy");
+        this.reverTdWidth();
       
-      this.revertElements("first");
+        if(this.applyToAnotherTable) {
+          this.revertElements("last");
+        }
+      
+        this.$this.find(".m_inner").draggable("destroy");
+        
+        this.revertElements("first");
+        
+        this.hasUsed = false;
+        
+      }
     
     }
   
